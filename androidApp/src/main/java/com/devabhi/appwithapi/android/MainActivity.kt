@@ -1,7 +1,5 @@
 package com.devabhi.appwithapi.android
 
-import com.devabhi.appwithapi.Breach
-import com.devabhi.appwithapi.DataFetcher
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,81 +8,105 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-
+import com.devabhi.appwithapi.ApiClient
+import com.devabhi.appwithapi.Data
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val dataFetcher = DataFetcher()
+    private val apiClient = ApiClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            MyApp {
+                var dataList by remember { mutableStateOf<List<Data>>(emptyList()) }
+                val scope = rememberCoroutineScope()
 
-            BreachListScreen(dataFetcher)
+                // Fetch data when the screen appears
+                LaunchedEffect(Unit) {
+                    scope.launch {
+                        dataList = apiClient.fetchData()
+                    }
+                }
 
-        }
-    }
-}
+                // Display data in a LazyColumn
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    if (dataList.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No data available, dataList size: ${dataList.size}",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    } else {
+                        items(dataList) { data ->
+                            DataItem(data)
+                        }
+                    }
+                }
 
-
-@Composable
-fun BreachListScreen(dataFetcher: DataFetcher) {
-    var breaches by remember { mutableStateOf<List<Breach>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf("") }
-
-    LaunchedEffect(Unit) {
-        try {
-            breaches = dataFetcher.fetchBreaches() // Fetch the breaches
-            isLoading = false
-        } catch (e: Exception) {
-            errorMessage = "Error fetching breaches: ${e.message}"
-            isLoading = false
-        }
-    }
-
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator() // Show loading spinner
-        }
-    } else if (errorMessage.isNotEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = errorMessage) // Display error message
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            items(breaches) { breach ->
-                BreachItem(breach) // Display each breach in the list
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        apiClient.close()
+    }
 }
 
 @Composable
-fun BreachItem(breach: Breach) {
-    Column(
+fun DataItem(data: Data) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Text(text = "Name: ${breach.name}", style = MaterialTheme.typography.bodyLarge)
-        Text(text = "Domain: ${breach.domain}", style = MaterialTheme.typography.bodyMedium)
-        Text(
-            text = "Description: ${breach.description}",
-            style = MaterialTheme.typography.bodySmall
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = data.title,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = data.description,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Domain: ${data.domain}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Pwn Count: ${data.pwnCount}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Added Date: ${data.addedDate}",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+fun MyApp(content: @Composable () -> Unit) {
+    MaterialTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            content()
+        }
     }
 }

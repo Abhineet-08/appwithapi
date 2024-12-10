@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-    kotlin("plugin.serialization") version "1.7.10"
+    kotlin("plugin.serialization") version "2.0.20"
     
 }
 
@@ -40,6 +40,7 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.kotlinx.coroutines.core.v173)
+            implementation(libs.ktor.client.okhttp)
 
             // Kotlinx Serialization
             implementation(libs.kotlinx.serialization.json)
